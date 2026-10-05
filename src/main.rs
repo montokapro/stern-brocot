@@ -67,7 +67,7 @@ fn format_matrix(m: Mat, is_center: bool, mode: Mode) -> Vec<String> {
         Mode::Simple => {
             let num = m.a + m.b;
             let den = m.c + m.d;
-            
+
             // Normalize fraction signs
             let (disp_num, disp_den) = if den < 0 {
                 (-num, -den)
@@ -111,7 +111,6 @@ fn main() -> std::io::Result<()> {
         execute!(stdout, Clear(ClearType::All))?;
         let m = current_matrix;
 
-        // Coordinates map perfectly to the 15 positions unrolled from your algebraic ascii diagram.
         let nodes = vec![
             // Row 1
             (0, 0, m.mul(R_INV).mul(R_INV), false),
@@ -119,40 +118,47 @@ fn main() -> std::io::Result<()> {
             (42, 0, m.mul(L_INV).mul(R_INV), false),
             (56, 0, m.mul(L_INV).mul(L_INV), false),
             // Row 2
-            (0, 7, m.mul(R_INV).mul(L), false),
-            (14, 7, m.mul(R_INV), false),
-            (42, 7, m.mul(L_INV), false),
-            (56, 7, m.mul(L_INV).mul(R), false),
+            (0, 6, m.mul(R_INV).mul(L), false),
+            (14, 6, m.mul(R_INV), false),
+            (42, 6, m.mul(L_INV), false),
+            (56, 6, m.mul(L_INV).mul(R), false),
             // Row 3 (Center Focus)
-            (28, 14, m, true),
+            (28, 12, m, true),
             // Row 4
-            (0, 21, m.mul(L).mul(R_INV), false),
-            (14, 21, m.mul(L), false),
-            (42, 21, m.mul(R), false),
-            (56, 21, m.mul(R).mul(L_INV), false),
+            (0, 18, m.mul(L).mul(R_INV), false),
+            (14, 18, m.mul(L), false),
+            (42, 18, m.mul(R), false),
+            (56, 18, m.mul(R).mul(L_INV), false),
             // Row 5
-            (0, 28, m.mul(L).mul(L), false),
-            (14, 28, m.mul(L).mul(R), false),
-            (42, 28, m.mul(R).mul(L), false),
-            (56, 28, m.mul(R).mul(R), false),
+            (0, 24, m.mul(L).mul(L), false),
+            (14, 24, m.mul(L).mul(R), false),
+            (42, 24, m.mul(R).mul(L), false),
+            (56, 24, m.mul(R).mul(R), false),
         ];
 
         // Arrow structural wiring
         let arrows = vec![
-            // Center connecting upward
-            ('↖', 26, 13), ('↗', 40, 13),
-            // Center connecting downward
-            ('↙', 26, 19), ('↘', 40, 19),
-            // Row 2 connecting up to Row 1
-            ('↖', 12, 6),  ('↗', 20, 6),
-            ('↖', 40, 6),  ('↗', 48, 6),
-            // Row 4 connecting down to Row 5
-            ('↙', 12, 26), ('↘', 20, 26),
-            ('↙', 40, 26), ('↘', 48, 26),
-            // Horizontal inner connections Row 2
-            ('↙', 12, 9),  ('↘', 54, 9),
-            // Horizontal inner connections Row 4
-            ('↖', 12, 23), ('↗', 54, 23),
+            // Center
+            ('↖', (2 * 14) - 2, 11),
+            ('↗', (3 * 14) - 2, 11),
+            ('↙', (2 * 14) - 2, 17),
+            ('↘', (3 * 14) - 2, 17),
+            // Top left
+            ('↖', (1 * 14) - 2, 5),
+            ('↗', (1 * 14) + 5, 5),
+            ('↙', (1 * 14) - 2, 8),
+            // Top right
+            ('↖', (4 * 14) - 9, 5),
+            ('↗', (4 * 14) - 2, 5),
+            ('↘', (4 * 14) - 2, 8),
+            // Bottom left
+            ('↙', (1 * 14) - 2, 23),
+            ('↘', (1 * 14) + 5, 23),
+            ('↖', (1 * 14) - 2, 20),
+            // Bottom right
+            ('↙', (4 * 14) - 9, 23),
+            ('↘', (4 * 14) - 2, 23),
+            ('↗', (4 * 14) - 2, 20)
         ];
 
         // Draw Nodes
@@ -174,7 +180,7 @@ fn main() -> std::io::Result<()> {
 
         execute!(
             stdout,
-            MoveTo(OFFSET_X, 35),
+            MoveTo(OFFSET_X, 32),
             Print("Navigation: [Left/Right] Downward | [Shift+Left/Right] Upward | [Space] Toggle View | [Q/Esc] Quit")
         )?;
 
