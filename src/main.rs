@@ -34,18 +34,20 @@ const R_INV: Mat = Mat { a: 1, b: -1, c: 0, d: 1 };
 
 #[derive(Clone, Copy)]
 enum Mode {
-    Matrix,
     Simple,
+    Matrix,
+    Decimal
 }
 
 fn center_pad(s: &str, width: usize) -> String {
     let len = s.chars().count();
     if len >= width {
-        return s.to_string();
+        format!("{:width$}", s)
+    } else {
+        let left = (width - len) / 2;
+        let right = width - len - left;
+        format!("{}{}{}", " ".repeat(left), s, " ".repeat(right))
     }
-    let left = (width - len) / 2;
-    let right = width - len - left;
-    format!("{}{}{}", " ".repeat(left), s, " ".repeat(right))
 }
 
 fn format_matrix(m: Mat, is_center: bool, mode: Mode) -> Vec<String> {
@@ -55,15 +57,6 @@ fn format_matrix(m: Mat, is_center: bool, mode: Mode) -> Vec<String> {
     let mut lines = vec![top_border.to_string()];
 
     match mode {
-        Mode::Matrix => {
-            let a = center_pad(&m.a.to_string(), 5);
-            let b = center_pad(&m.b.to_string(), 5);
-            let c = center_pad(&m.c.to_string(), 5);
-            let d = center_pad(&m.d.to_string(), 5);
-            lines.push(format!("{} {}", a, b));
-            lines.push("           ".to_string());
-            lines.push(format!("{} {}", c, d));
-        }
         Mode::Simple => {
             let num = m.a + m.b;
             let den = m.c + m.d;
@@ -90,6 +83,31 @@ fn format_matrix(m: Mat, is_center: bool, mode: Mode) -> Vec<String> {
                 lines.push(center_pad(&disp_den.to_string(), 11));
             }
         }
+        Mode::Matrix => {
+            let a = center_pad(&m.a.to_string(), 5);
+            let b = center_pad(&m.b.to_string(), 5);
+            let c = center_pad(&m.c.to_string(), 5);
+            let d = center_pad(&m.d.to_string(), 5);
+            lines.push(format!("{} {}", a, b));
+            lines.push("           ".to_string());
+            lines.push(format!("{} {}", c, d));
+        }
+        Mode::Decimal => {
+            let num = m.a + m.b;
+            let den = m.c + m.d;
+            let float = num as f32 / den as f32;
+
+            if den == 0 {
+                let inf = if num < 0 { "-∞" } else { "∞" };
+                lines.push("           ".to_string());
+                lines.push(center_pad(inf, 11));
+                lines.push("           ".to_string());
+            } else {
+                lines.push("           ".to_string());
+                lines.push(center_pad(&float.to_string(), 11));
+                lines.push("           ".to_string());
+            }
+        }
     }
 
     lines.push(bot_border.to_string());
@@ -102,7 +120,7 @@ fn main() -> std::io::Result<()> {
     execute!(stdout, Hide, Clear(ClearType::All))?;
 
     let mut current_matrix = Mat { a: 1, b: 0, c: 0, d: 1 };
-    let mut mode = Mode::Matrix;
+    let mut mode = Mode::Simple;
 
     const OFFSET_X: u16 = 4;
     const OFFSET_Y: u16 = 2;
@@ -193,8 +211,9 @@ fn main() -> std::io::Result<()> {
                     KeyCode::Char('q') | KeyCode::Esc => break,
                     KeyCode::Char(' ') => {
                         mode = match mode {
-                            Mode::Matrix => Mode::Simple,
                             Mode::Simple => Mode::Matrix,
+                            Mode::Matrix => Mode::Decimal,
+                            Mode::Decimal => Mode::Simple
                         }
                     }
                     KeyCode::Left => {

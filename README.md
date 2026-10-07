@@ -147,6 +147,43 @@ The simple view lets you view the standard way we represent numbers. However, so
     Navigation: [Left/Right] Downward | [Shift+Left/Right] Upward | [Space] Toggle View | [Q/Esc] Quit
 ```
 
+## Decimal
+
+The decimal view lets you view the standard way we represent numbers. Infinite fractions are truncated.
+```
+    ┌         ┐   ┌         ┐                 ┌         ┐   ┌         ┐
+                                                                       
+        -1             ∞                           0            -1     
+                                                                       
+    └         ┘   └         ┘                 └         ┘   └         ┘
+                ↖      ↗                           ↖      ↗
+    ┌         ┐   ┌         ┐                 ┌         ┐   ┌         ┐
+                                                                       
+       -0.5     ↙      0                           ∞      ↘     -2     
+                                                                       
+    └         ┘   └         ┘                 └         ┘   └         ┘
+                              ↖             ↗
+                                ┏         ┓
+                                           
+                                     1     
+                                           
+                                ┗         ┛
+                              ↙             ↘
+    ┌         ┐   ┌         ┐                 ┌         ┐   ┌         ┐
+                                                                       
+         0      ↖     0.5                          2      ↗      ∞     
+                                                                       
+    └         ┘   └         ┘                 └         ┘   └         ┘
+                ↙      ↘                           ↙      ↘
+    ┌         ┐   ┌         ┐                 ┌         ┐   ┌         ┐
+                                                                       
+    0.33333334     0.6666667                      1.5            3     
+                                                                       
+    └         ┘   └         ┘                 └         ┘   └         ┘
+
+    Navigation: [Left/Right] Downward | [Shift+Left/Right] Upward | [Space] Toggle View | [Q/Esc] Quit
+```
+
 ## References
 
 Many wonderful visualizations and explanations of the stern-brocot trees already exist. Here are a few.
