@@ -121,14 +121,22 @@ fn main() -> std::io::Result<()> {
 
     let mut current_matrix = Mat { a: 1, b: 0, c: 0, d: 1 };
     let mut mode = Mode::Simple;
+    let mut path: Vec<char> = Vec::new();
 
     const OFFSET_X: u16 = 4;
-    const OFFSET_Y: u16 = 2;
+    const OFFSET_Y: u16 = 3;
 
     loop {
         execute!(stdout, Clear(ClearType::All))?;
-        let m = current_matrix;
 
+        let path_str: String = path.iter().collect();
+        execute!(
+            stdout,
+            MoveTo(OFFSET_X, 1),
+            Print(format!("Path: {}", path_str))
+        )?;
+
+        let m = current_matrix;
         let nodes = vec![
             // Row 1
             (0, 0, m.mul(R_INV).mul(R_INV), false),
@@ -198,7 +206,7 @@ fn main() -> std::io::Result<()> {
 
         execute!(
             stdout,
-            MoveTo(OFFSET_X, 32),
+            MoveTo(OFFSET_X, 33),
             Print("Navigation: [Left/Right] Downward | [Shift+Left/Right] Upward | [Space] Toggle View | [Q/Esc] Quit")
         )?;
 
@@ -219,15 +227,19 @@ fn main() -> std::io::Result<()> {
                     KeyCode::Left => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             current_matrix = current_matrix.mul(R_INV); // Up-Left Parent
+                            path.push('↖');
                         } else {
                             current_matrix = current_matrix.mul(L); // Down-Left Child
+                            path.push('↙');
                         }
                     }
                     KeyCode::Right => {
                         if key.modifiers.contains(KeyModifiers::SHIFT) {
                             current_matrix = current_matrix.mul(L_INV); // Up-Right Parent
+                            path.push('↗');
                         } else {
                             current_matrix = current_matrix.mul(R); // Down-Right Child
+                            path.push('↘');
                         }
                     }
                     _ => {}
