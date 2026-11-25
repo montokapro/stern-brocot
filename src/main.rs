@@ -368,7 +368,14 @@ fn content_width(m: Mat, view: View) -> usize {
             let (n, d) = frac(m);
             n.to_string().len().max(d.to_string().len()) + 2
         }
-        View::Decimal | View::Minkowski | View::ExplainPath | View::ExplainMatrix => 0,
+	View::Minkowski => {
+            let (n, d) = frac(m);
+            match (d != 0).then(|| minkowski_dyadic(n, d)).flatten() {
+                Some((p, q)) => p.to_string().len().max(q.to_string().len()) + 2,
+                None => 0,
+            }
+        }
+        View::Decimal | View::ExplainPath | View::ExplainMatrix => 0,
     }
 }
 
@@ -419,6 +426,41 @@ fn minkowski(num: i128, den: i128) -> f64 {
     int as f64 + sum
 }
 
+/// Exact Minkowski question mark of num/den (den > 0) as p / 2^q in lowest terms.
+/// Same continued-fraction formula as `minkowski`, scaled by 2^(S-1) so every
+/// term is an integer, where S is the sum of the partial quotients.
+/// None if the numerator doesn't fit in i128.
+fn minkowski_dyadic(num: i128, den: i128) -> Option<(i128, u32)> {
+    let int = num.div_euclid(den);
+    let (mut a, mut b) = (den, num.rem_euclid(den));
+    let mut sums: Vec<i128> = Vec::new(); // a1, a1+a2, a1+a2+a3, ...
+    let mut s: i128 = 0;
+    while b != 0 {
+        s += a / b;
+        sums.push(s);
+        (a, b) = (b, a % b);
+    }
+    let Some(&total) = sums.last() else {
+        return Some((int, 0)); // integer
+    };
+    let e = total - 1;
+    if e > 125 {
+        return None;
+    }
+    let mut p = int.checked_mul(1i128 << e)?;
+    let mut sign: i128 = 1;
+    for sk in sums {
+        p = p.checked_add(sign * (1i128 << (total - sk)))?;
+        sign = -sign;
+    }
+    let mut q = e as u32;
+    while q > 0 && p % 2 == 0 {
+        p /= 2;
+        q -= 1;
+    }
+    Some((p, q))
+}
+
 fn render_node(m: Option<Mat>, bold: bool, view: View, w: usize) -> Vec<String> {
     let blank = " ".repeat(w);
 
@@ -442,8 +484,23 @@ fn render_node(m: Option<Mat>, bold: bool, view: View, w: usize) -> Vec<String> 
                 let s = fmt_decimal(n as f64 / d as f64, MIN_WIDTH);
                 vec![blank.clone(), center_pad(&s, w), blank.clone()]
             } else if let View::Minkowski = view {
-                let s = fmt_decimal(minkowski(n, d) as f64 / d as f64, MIN_WIDTH);
-                vec![blank.clone(), center_pad(&s, w), blank.clone()]
+                match minkowski_dyadic(n, d) {
+                    // integer: no bar, like the rational view
+                    Some((p, 0)) => {
+                        vec![blank.clone(), center_pad(&p.to_string(), w), blank.clone()]
+                    }
+                    // p over 2^q, with q on the bottom row and "2ⁿ" marking the bar
+                    Some((p, q)) => vec![
+                        center_pad(&p.to_string(), w),
+                        format!("╶{}2ⁿ╴", "─".repeat(w - 4)),
+                        center_pad(&q.to_string(), w),
+                    ],
+                    // numerator would overflow: fall back to a rounded decimal
+                    None => {
+                        let s = fmt_decimal(minkowski(n, d), MIN_WIDTH);
+                        vec![blank.clone(), center_pad(&s, w), blank.clone()]
+                    }
+                }
             } else if d == 1 {
                 vec![blank.clone(), center_pad(&n.to_string(), w), blank.clone()]
             } else {
