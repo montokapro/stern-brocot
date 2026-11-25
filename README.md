@@ -83,8 +83,10 @@ Left and right traverse the Stern–Brocot tree. Up and down traverse the Calkin
 
 The path shows the directions taken in order. Left and right append a direction, and up and down prepend a direction. An inverse move undoes the direction at the end it touches and shortens the path instead of growing it.
 
-- **Plain:** `L` ◣, `R` ◥, `L⁻¹` ◺, `R⁻¹` ◹
-- **Swap:** `Ls` ◤, `Rs` ◢, `Ls⁻¹` ◸, `Rs⁻¹` ◿
+- **Plain:** `L` ←, `R` →, `L⁻¹` ↚, `R⁻¹` ↛
+- **Swap:** `Ls` ⇐, `Rs` ⇒, `Ls⁻¹` ⇍, `Rs⁻¹` ⇏
+
+Each glyph names the matrix that was used, not the key that was pressed. In plain mode, pressing ↑ multiplies by `R`, so it adds a → to the front of the path.
 
 ## Modes
 
@@ -108,7 +110,7 @@ Each mode has its own pair of matrices. The glyph under a matrix is what the pat
 
   1     1           0     1
 └         ┘       └         ┘
-     ◣                 ◥
+     ←                 →
 ```
 ← `L`, → `R`, ↑ `R`, ↓ `L`
 
@@ -120,7 +122,7 @@ Each mode has its own pair of matrices. The glyph under a matrix is what the pat
 
  -1     1           0     1
 └         ┘       └         ┘
-     ◺                 ◹
+     ↚                 ↛
 ```
 ← `R⁻¹`, → `L⁻¹`, ↑ `L⁻¹`, ↓ `R⁻¹`
 
@@ -132,7 +134,7 @@ Each mode has its own pair of matrices. The glyph under a matrix is what the pat
 
   1     0           1     1
 └         ┘       └         ┘
-     ◤                 ◢
+     ⇐                 ⇒
 ```
 ← `Ls`, → `Rs`, ↑ `Ls`, ↓ `Rs`
 
@@ -144,7 +146,7 @@ Each mode has its own pair of matrices. The glyph under a matrix is what the pat
 
   1    -1           1     0
 └         ┘       └         ┘
-     ◸                 ◿
+     ⇍                 ⇏
 ```
 ← `Rs⁻¹`, → `Ls⁻¹`, ↑ `Rs⁻¹`, ↓ `Ls⁻¹`
 
@@ -189,11 +191,13 @@ The value rounded to nine places. Large values lose digits to fit the box and fa
 
 The value passed through the Minkowski question mark function `?(x)`. It is defined by `?(0) = 0`, `?(1) = 1` and `?(mediant) = (?(left) + ?(right)) / 2`. Rationals map to dyadic rationals, and the function is extended with `?(x + 1) = ?(x) + 1`.
 
+```
 ┏         ┓
      5
 ╶───────2ⁿ╴
      1
 ┗         ┛
+```
 
 ### Explain path
 
@@ -205,25 +209,25 @@ A static view that shows how each neighbor is reached from the current matrix `M
 
                   ┌         ┐
                              
-                     ◥ × M   
+                     → × M   
                              
                   └         ┘
                        ↑
     ┌         ┐   ┏         ┓   ┌         ┐
                                            
-       M × ◣    ←      M      →    M × ◥   
+       M × ←    ←      M      →    M × →   
                                            
     └         ┘   ┗         ┛   └         ┘
                        ↓
                   ┌         ┐
                              
-                     ◣ × M   
+                     ← × M   
                              
                   └         ┘
 
     [←↑↓→] Move | [V] View | [S] Swap | [I] Inverse | [R] Reset | [Q] Quit
 ```
-Left and right append the path, and up and down prepend the path. In plain mode, up uses ◥ and down uses ◣.
+Left and right append the path, and up and down prepend the path. In plain mode, up uses → and down uses ←.
 
 ### Explain matrix
 
@@ -260,9 +264,9 @@ Stay in plain mode and use only ← and →. Every positive rational is reachabl
 
 Irrationals can be approximated at increasing fidelity via their continued fractions.
 
-- The golden ratio zigzags: `◥◣◥◣...`. The values are 2, 3/2, 5/3, 8/5, ...
-- √2 zigzags in doubles: `◥ ◣◣ ◥◥ ◣◣ ◥◥...`. The values are 2, 3/2, 4/3, 7/5, 10/7, 17/12, ...
-- e is more complicated: `◥◥ ◣ ◥◥ ◣ ◥ ◣◣◣◣ ◥ ◣ ◥◥◥◥◥◥ ◣ ◥...`, which follows its continued fraction `[2; 1, 2, 1, 1, 4, 1, 1, 6, ...]`.
+- The golden ratio zigzags: `→ ← → ← ...`. The values are 2, 3/2, 5/3, 8/5, ...
+- √2 zigzags in doubles: `→ ← ← → → ← ← → → ...`. The values are 2, 3/2, 4/3, 7/5, 10/7, 17/12, ...
+- e is more complicated: `→ → ← → → ← → ← ← ← ← → ← → → → → → → ← →...`, which follows its continued fraction `[2; 1, 2, 1, 1, 4, 1, 1, 6, ...]`.
 
 Try a few different ways of approaching the golden ratio! 
 
@@ -311,14 +315,14 @@ Note that the rational representation is not unique. Here is the negative identi
 ```
 
 To reach it, follow one of these paths:
-- `◹◣◹◣◹◣`
-- `◥◺◥◺◥◺`
-- `◺◥◺◥◺◥`
-- `◣◹◣◹◣◹`
-- `◿◤◿◤◿◤`
-- `◢◸◢◸◢◸`
-- `◤◿◤◿◤◿`
-- `◸◢◸◢◸◢`
+- `↛ ← ↛ ← ↛ ←`
+- `→ ↚ → ↚ → ↚`
+- `↚ → ↚ → ↚ →`
+- `← ↛ ← ↛ ← ↛`
+- `⇏ ⇐ ⇏ ⇐ ⇏ ⇐`
+- `⇒ ⇍ ⇒ ⇍ ⇒ ⇍`
+- `⇐ ⇏ ⇐ ⇏ ⇐ ⇏`
+- `⇍ ⇒ ⇍ ⇒ ⇍ ⇒`
 
 Following the same path again gets you back to the identity. Try following the path to see how it rotates through zeros, infinities, and negatives.
 Even more matrices share the same rational! See if you can reach this one using a combination of moves.

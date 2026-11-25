@@ -530,13 +530,14 @@ fn arrow(dir: Dir, swap: bool) -> char {
 }
 
 fn path_display(path: &VecDeque<Step>) -> String {
-    let glyphs: Vec<char> = path.iter().map(|s| s.glyph()).collect();
-    if glyphs.len() <= 60 {
-        glyphs.into_iter().collect()
+    let glyphs: Vec<String> = path.iter().map(|s| s.glyph().to_string()).collect();
+    if glyphs.len() <= 40 {
+        glyphs.join(" ")
     } else {
-        let head: String = glyphs[..29].iter().collect();
-        let tail: String = glyphs[glyphs.len() - 30..].iter().collect();
-        format!("{head}…{tail}")
+        // long paths: keep both ends, elide the middle
+        let head = glyphs[..19].join(" ");
+        let tail = glyphs[glyphs.len() - 20..].join(" ");
+        format!("{head} … {tail}")
     }
 }
 
