@@ -87,14 +87,14 @@ impl Step {
 
     fn glyph(self) -> char {
         match (self.swap, self.side, self.inverse) {
-            (false, Side::Left, false) => '◣',  // L
-            (false, Side::Right, false) => '◥', // R
-            (false, Side::Left, true) => '◺',   // L⁻¹
-            (false, Side::Right, true) => '◹',  // R⁻¹
-            (true, Side::Left, false) => '◤',   // Ls
-            (true, Side::Right, false) => '◢',  // Rs
-            (true, Side::Left, true) => '◸',    // Ls⁻¹
-            (true, Side::Right, true) => '◿',   // Rs⁻¹
+            (false, Side::Left, false) => '←',  // L
+            (false, Side::Right, false) => '→', // R
+            (false, Side::Left, true) => '↚',   // L⁻¹
+            (false, Side::Right, true) => '↛',  // R⁻¹
+            (true, Side::Left, false) => '⇐',   // Ls
+            (true, Side::Right, false) => '⇒',  // Rs
+            (true, Side::Left, true) => '⇍',    // Ls⁻¹
+            (true, Side::Right, true) => '⇏',   // Rs⁻¹
         }
     }
 
@@ -156,6 +156,7 @@ enum View {
     Matrix,
     Rational,
     Decimal,
+    Minkowski,
     ExplainPath,
     ExplainMatrix,
 }
@@ -165,7 +166,8 @@ impl View {
         match self {
             View::Matrix => View::Rational,
             View::Rational => View::Decimal,
-            View::Decimal => View::ExplainPath,
+            View::Decimal => View::Minkowski,
+	    View::Minkowski => View::ExplainPath,
             View::ExplainPath => View::ExplainMatrix,
             View::ExplainMatrix => View::Matrix,
         }
@@ -176,6 +178,7 @@ impl View {
             View::Matrix => "matrix",
             View::Rational => "rational",
             View::Decimal => "decimal",
+            View::Minkowski => "minkowski",
             View::ExplainPath => "explain path",
             View::ExplainMatrix => "explain matrix",
         }
@@ -365,7 +368,7 @@ fn content_width(m: Mat, view: View) -> usize {
             let (n, d) = frac(m);
             n.to_string().len().max(d.to_string().len()) + 2
         }
-        View::Decimal | View::ExplainPath | View::ExplainMatrix => 0,
+        View::Decimal | View::Minkowski | View::ExplainPath | View::ExplainMatrix => 0,
     }
 }
 
@@ -394,6 +397,28 @@ fn matrix_body(cells: [String; 4], w: usize) -> Vec<String> {
     ]
 }
 
+/// Minkowski question mark of num/den (den > 0).
+/// Closed form of the mediant recursion ?((p+r)/(q+s)) = (?(p/q) + ?(r/s)) / 2,
+/// evaluated from the continued fraction of the fractional part.
+fn minkowski(num: i128, den: i128) -> f64 {
+    let int = num.div_euclid(den);
+    let (mut p, mut q) = (den, num.rem_euclid(den)); // 1/frac = p/q
+    let mut sum = 0.0;
+    let mut sign = 1.0;
+    let mut exp: i128 = 0;
+    while q != 0 {
+        let a = p / q;
+        (p, q) = (q, p % q);
+        exp += a;
+        if exp > 1100 {
+            break; // remaining terms are below f64 precision
+        }
+        sum += sign * 2.0 * 0.5f64.powi(exp as i32);
+        sign = -sign;
+    }
+    int as f64 + sum
+}
+
 fn render_node(m: Option<Mat>, bold: bool, view: View, w: usize) -> Vec<String> {
     let blank = " ".repeat(w);
 
@@ -415,6 +440,9 @@ fn render_node(m: Option<Mat>, bold: bool, view: View, w: usize) -> Vec<String> 
                 vec![blank.clone(), center_pad(inf, w), blank.clone()]
             } else if let View::Decimal = view {
                 let s = fmt_decimal(n as f64 / d as f64, MIN_WIDTH);
+                vec![blank.clone(), center_pad(&s, w), blank.clone()]
+            } else if let View::Minkowski = view {
+                let s = fmt_decimal(minkowski(n, d) as f64 / d as f64, MIN_WIDTH);
                 vec![blank.clone(), center_pad(&s, w), blank.clone()]
             } else if d == 1 {
                 vec![blank.clone(), center_pad(&n.to_string(), w), blank.clone()]

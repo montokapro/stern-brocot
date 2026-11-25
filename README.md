@@ -185,6 +185,39 @@ The value rounded to nine places. Large values lose digits to fit the box and fa
 ┗         ┛
 ```
 
+### Minkowski
+
+The value passed through the Minkowski question mark function `?(x)`. It is defined by `?(0) = 0`, `?(1) = 1` and `?(mediant) = (?(left) + ?(right)) / 2`. Rationals map to dyadic rationals, and the function is extended with `?(x + 1) = ?(x) + 1`.
+
+Here is the node reached by pressing ←, whose value is 1/2:
+```
+    View: minkowski | Swap: off | Inverse: off
+
+    Path: ◣
+
+                  ┌         ┐
+
+                  1.500000000
+
+                  └         ┘
+                       ↑
+    ┌         ┐   ┏         ┓   ┌         ┐
+
+    0.250000000 ← 0.500000000 → 0.750000000
+
+    └         ┘   ┗         ┛   └         ┘
+                       ↓
+                  ┌         ┐
+
+                  0.250000000
+
+                  └         ┘
+
+    [←↑↓→] Move | [V] View | [S] Swap | [I] Inverse | [R] Reset | [Q] Quit
+```
+
+Left and down both reach 1/3, which becomes 0.25. Right reaches 2/3, which becomes 0.75. Up reaches 3/2, which becomes `1 + ?(1/2) = 1.5`.
+
 ### Explain path
 
 A static view that shows how each neighbor is reached from the current matrix `M`, using the path symbols. It respects the swap and inverse toggles.
