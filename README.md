@@ -337,7 +337,7 @@ Even more matrices share the same rational! See if you can reach this one using 
 
 ## Limits
 
-Entries are 64-bit integers. A move that would overflow is ignored, and that neighbor's box shows `overflow`.
+Matrix entries are 64-bit integers. A move that would overflow is ignored.
 
 ## References
 

@@ -320,7 +320,7 @@ fn fmt_lin(l: Lin) -> String {
 
 const OFFSET_X: usize = 4;
 const OFFSET_Y: usize = 4;
-const MIN_WIDTH: usize = 11;
+const WIDTH: usize = 11;
 
 fn center_pad(s: &str, width: usize) -> String {
     let len = s.chars().count();
@@ -343,87 +343,41 @@ fn frac(m: Mat) -> (i128, i128) {
     }
 }
 
-fn fmt_decimal(x: f64, max_len: usize) -> String {
-    for prec in (0..=9).rev() {
-        let s = format!("{:.*}", prec, x);
-        if s.len() <= max_len {
-            return s;
-        }
-    }
-    format!("{:.3e}", x)
+/// Largest precision (up to 9 places) that fits in the box, or None.
+fn fmt_decimal(x: f64) -> Option<String> {
+    (0..=9)
+        .rev()
+        .map(|prec| format!("{:.*}", prec, x))
+        .find(|s| s.len() <= WIDTH)
 }
 
-/// Width this node needs in the given view.
-fn content_width(m: Mat, view: View) -> usize {
-    match view {
-        View::Matrix => {
-            let longest = [m.a, m.b, m.c, m.d]
-                .iter()
-                .map(|v| v.to_string().len())
-                .max()
-                .unwrap_or(1);
-            2 * longest + 1
-        }
-        View::Rational => {
-            let (n, d) = frac(m);
-            n.to_string().len().max(d.to_string().len()) + 2
-        }
-	View::Minkowski => {
-            let (n, d) = frac(m);
-            match (d != 0).then(|| minkowski_dyadic(n, d)).flatten() {
-                Some((p, q)) => p.to_string().len().max(q.to_string().len()) + 2,
-                None => 0,
-            }
-        }
-        View::Decimal | View::ExplainPath | View::ExplainMatrix => 0,
-    }
+fn too_large() -> Vec<String> {
+    vec![" ".repeat(WIDTH), center_pad("too large", WIDTH), " ".repeat(WIDTH)]
 }
 
 /// Wraps a 3-line body in the box borders.
-fn frame(body: Vec<String>, bold: bool, w: usize) -> Vec<String> {
+fn frame(body: Vec<String>, bold: bool) -> Vec<String> {
     let (tl, tr, bl, br) = if bold {
         ('┏', '┓', '┗', '┛')
     } else {
         ('┌', '┐', '└', '┘')
     };
-    let gap = " ".repeat(w - 2);
+    let gap = " ".repeat(WIDTH - 2);
     let mut lines = vec![format!("{tl}{gap}{tr}")];
     lines.extend(body);
     lines.push(format!("{bl}{gap}{br}"));
     lines
 }
 
-/// Two columns of cells, used by both the matrix and explain views.
-fn matrix_body(cells: [String; 4], w: usize) -> Vec<String> {
-    let lw = (w - 1) / 2;
-    let rw = w - 1 - lw;
+/// Two columns of cells, used by the matrix and explain-matrix views.
+fn matrix_body(cells: [String; 4]) -> Vec<String> {
+    let lw = (WIDTH - 1) / 2;
+    let rw = WIDTH - 1 - lw;
     vec![
         format!("{} {}", center_pad(&cells[0], lw), center_pad(&cells[1], rw)),
-        " ".repeat(w),
+        " ".repeat(WIDTH),
         format!("{} {}", center_pad(&cells[2], lw), center_pad(&cells[3], rw)),
     ]
-}
-
-/// Minkowski question mark of num/den (den > 0).
-/// Closed form of the mediant recursion ?((p+r)/(q+s)) = (?(p/q) + ?(r/s)) / 2,
-/// evaluated from the continued fraction of the fractional part.
-fn minkowski(num: i128, den: i128) -> f64 {
-    let int = num.div_euclid(den);
-    let (mut p, mut q) = (den, num.rem_euclid(den)); // 1/frac = p/q
-    let mut sum = 0.0;
-    let mut sign = 1.0;
-    let mut exp: i128 = 0;
-    while q != 0 {
-        let a = p / q;
-        (p, q) = (q, p % q);
-        exp += a;
-        if exp > 1100 {
-            break; // remaining terms are below f64 precision
-        }
-        sum += sign * 2.0 * 0.5f64.powi(exp as i32);
-        sign = -sign;
-    }
-    int as f64 + sum
 }
 
 /// Exact Minkowski question mark of num/den (den > 0) as p / 2^q in lowest terms.
@@ -461,59 +415,66 @@ fn minkowski_dyadic(num: i128, den: i128) -> Option<(i128, u32)> {
     Some((p, q))
 }
 
-fn render_node(m: Option<Mat>, bold: bool, view: View, w: usize) -> Vec<String> {
-    let blank = " ".repeat(w);
+fn render_node(m: Option<Mat>, bold: bool, view: View) -> Vec<String> {
+    let blank = " ".repeat(WIDTH);
+    let single = |s: &str| vec![blank.clone(), center_pad(s, WIDTH), blank.clone()];
 
     let body = match (m, view) {
-	(_, View::ExplainPath) => vec![blank.clone(), center_pad("M", w), blank.clone()],
-        (_, View::ExplainMatrix) => matrix_body(
-            ["a", "b", "c", "d"].map(String::from),
-            w,
-        ),
-        (None, _) => vec![blank.clone(), center_pad("overflow", w), blank.clone()],
-        (Some(m), View::Matrix) => matrix_body(
-            [m.a, m.b, m.c, m.d].map(|v| v.to_string()),
-            w,
-        ),
-        (Some(m), _) => {
+        (_, View::ExplainMatrix) => matrix_body(["a", "b", "c", "d"].map(String::from)),
+        (_, View::ExplainPath) => single("M"),
+        (None, _) => single("overflow"),
+        (Some(m), View::Matrix) => {
+            let cells = [m.a, m.b, m.c, m.d].map(|v| v.to_string());
+            if cells.iter().any(|s| s.len() > (WIDTH - 1) / 2) {
+                too_large()
+            } else {
+                matrix_body(cells)
+            }
+        }
+        (Some(m), view) => {
             let (n, d) = frac(m);
             if d == 0 {
-                let inf = if n < 0 { "-∞" } else { "∞" };
-                vec![blank.clone(), center_pad(inf, w), blank.clone()]
-            } else if let View::Decimal = view {
-                let s = fmt_decimal(n as f64 / d as f64, MIN_WIDTH);
-                vec![blank.clone(), center_pad(&s, w), blank.clone()]
-            } else if let View::Minkowski = view {
-                match minkowski_dyadic(n, d) {
-                    // integer: no bar, like the rational view
-                    Some((p, 0)) => {
-                        vec![blank.clone(), center_pad(&p.to_string(), w), blank.clone()]
-                    }
-                    // p over 2^q, with q on the bottom row and "2ⁿ" marking the bar
-                    Some((p, q)) => vec![
-                        center_pad(&p.to_string(), w),
-                        format!("╶{}2ⁿ╴", "─".repeat(w - 4)),
-                        center_pad(&q.to_string(), w),
-                    ],
-                    // numerator would overflow: fall back to a rounded decimal
-                    None => {
-                        let s = fmt_decimal(minkowski(n, d), MIN_WIDTH);
-                        vec![blank.clone(), center_pad(&s, w), blank.clone()]
+                single(if n < 0 { "-∞" } else { "∞" })
+            } else {
+                match view {
+                    View::Decimal => match fmt_decimal(n as f64 / d as f64) {
+                        Some(s) => single(&s),
+                        None => too_large(),
+                    },
+                    View::Minkowski => match minkowski_dyadic(n, d) {
+                        Some((p, q)) if p.to_string().len() <= WIDTH - 2 => {
+                            if q == 0 {
+                                single(&p.to_string())
+                            } else {
+                                vec![
+                                    center_pad(&p.to_string(), WIDTH),
+                                    format!("╶{}2ⁿ╴", "─".repeat(WIDTH - 4)),
+                                    center_pad(&q.to_string(), WIDTH),
+                                ]
+                            }
+                        }
+                        _ => too_large(),
+                    },
+                    _ => {
+                        let (ns, ds) = (n.to_string(), d.to_string());
+                        if ns.len() > WIDTH - 2 || ds.len() > WIDTH - 2 {
+                            too_large()
+                        } else if d == 1 {
+                            single(&ns)
+                        } else {
+                            vec![
+                                center_pad(&ns, WIDTH),
+                                format!("╶{}╴", "─".repeat(WIDTH - 2)),
+                                center_pad(&ds, WIDTH),
+                            ]
+                        }
                     }
                 }
-            } else if d == 1 {
-                vec![blank.clone(), center_pad(&n.to_string(), w), blank.clone()]
-            } else {
-                vec![
-                    center_pad(&n.to_string(), w),
-                    format!("╶{}╴", "─".repeat(w - 2)),
-                    center_pad(&d.to_string(), w),
-                ]
             }
         }
     };
 
-    frame(body, bold, w)
+    frame(body, bold)
 }
 
 fn arrow(dir: Dir, swap: bool) -> char {
@@ -568,23 +529,10 @@ fn draw(out: &mut Stdout, st: &State) -> io::Result<()> {
         Print(format!("Path: {}", path_display(&st.path)))
     )?;
 
-    let explain = matches!(st.view, View::ExplainPath | View::ExplainMatrix);
     let neighbors: Vec<(Dir, Option<Mat>)> =
         Dir::ALL.iter().map(|&d| (d, st.target(d))).collect();
 
-    // All boxes share one width so the layout stays aligned.
-    let w = if explain {
-        MIN_WIDTH
-    } else {
-        std::iter::once(st.matrix)
-            .chain(neighbors.iter().filter_map(|(_, m)| *m))
-            .map(|m| content_width(m, st.view))
-            .max()
-            .unwrap_or(0)
-            .max(MIN_WIDTH)
-    };
-
-    let col = w + 3;
+    let col = WIDTH + 3;
     let node_pos = |dir: Dir| match dir {
         Dir::Up => (col, 0),
         Dir::Left => (0, 6),
@@ -592,14 +540,14 @@ fn draw(out: &mut Stdout, st: &State) -> io::Result<()> {
         Dir::Down => (col, 12),
     };
     let arrow_pos = |dir: Dir| match dir {
-        Dir::Up => (col + w / 2, 5),
-        Dir::Down => (col + w / 2, 11),
-        Dir::Left => (w + 1, 8),
-        Dir::Right => (2 * w + 4, 8),
+        Dir::Up => (col + WIDTH / 2, 5),
+        Dir::Down => (col + WIDTH / 2, 11),
+        Dir::Left => (WIDTH + 1, 8),
+        Dir::Right => (2 * WIDTH + 4, 8),
     };
 
     // Center node
-    for (i, line) in render_node(Some(st.matrix), true, st.view, w).iter().enumerate() {
+    for (i, line) in render_node(Some(st.matrix), true, st.view).iter().enumerate() {
         put(out, col, 6 + i, line)?;
     }
 
@@ -609,7 +557,7 @@ fn draw(out: &mut Stdout, st: &State) -> io::Result<()> {
         let lines = match st.view {
             View::ExplainMatrix => {
                 let cells = symbolic_target(dir, st.swap, st.inverse).map(fmt_lin);
-                frame(matrix_body(cells, w), false, w)
+                frame(matrix_body(cells), false)
             }
             View::ExplainPath => {
                 // Up/Down multiply on the left, Left/Right on the right
@@ -619,10 +567,10 @@ fn draw(out: &mut Stdout, st: &State) -> io::Result<()> {
                 } else {
                     format!("M × {g}")
                 };
-                let blank = " ".repeat(w);
-                frame(vec![blank.clone(), center_pad(&expr, w), blank], false, w)
+                let blank = " ".repeat(WIDTH);
+                frame(vec![blank.clone(), center_pad(&expr, WIDTH), blank], false)
             }
-            _ => render_node(m, false, st.view, w),
+            _ => render_node(m, false, st.view),
         };
         for (i, line) in lines.iter().enumerate() {
             put(out, x, y + i, line)?;
