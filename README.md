@@ -203,32 +203,32 @@ The value passed through the Minkowski question mark function `?(x)`. It is defi
 
 The Christoffel word of the pair `(u, v) = (a + b, c + d)`, which are the numerator and denominator with their signs kept. The word has `|u|` letters `x` and `|v|` letters `y`. It traces the lattice path from the origin to `(u, v)` that stays below the straight line between them and as close to it as possible. `x` is a horizontal step and `y` is a vertical one.
 
-The letter says which step is taken, and the row says its direction. Positive letters (right or up) sit on the top row, and negative letters (left or down) sit on the bottom row.
+The letter says which step is taken, and the row says its direction. Positive letters (right or up) sit on the top row, and negative letters (left or down) sit on the bottom row. The vertical line splits the word into the two Christoffel words of its standard factorization.
 
 5/3, where `(u, v) = (5, 3)`:
 ```
 ┏         ┓
- xxyxxyxy
-
-
+ xxy╷xxyxy 
+    │      
+    ╵      
 ┗         ┛
 ```
 
 -5/3, where `(u, v) = (-5, 3)`:
 ```
 ┏         ┓
-   y  y y
-
- xx xx x
+   y╷  y y 
+    │      
+ xx ╵xx x  
 ┗         ┛
 ```
 
 5/3, where `(u, v) = (-5, -3)`:
 ```
 ┏         ┓
-
-
- yxyxxyxx
+      ╷    
+      │    
+ yxyxx╵yxx 
 ┗         ┛
 ```
 

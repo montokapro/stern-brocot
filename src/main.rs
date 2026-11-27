@@ -418,20 +418,25 @@ fn minkowski_dyadic(num: i128, den: i128) -> Option<(i128, u32)> {
     Some((p, q))
 }
 
-/// Christoffel word of the pair (u, v) = (a+b, c+d), as (letter, negative) pairs.
+/// Christoffel word of the pair (u, v) = (a+b, c+d), as (letter, negative) pairs,
+/// plus the index where its standard factorization splits it into two Christoffel words.
 /// 'x' is a horizontal step and 'y' a vertical one; a negative letter steps left or down.
 /// The word traces the lattice path from (0, 0) to (u, v) that stays weakly below the
 /// straight line between them and as close to it as possible.
 /// None if the word wouldn't fit in a box.
-fn christoffel(u: i128, v: i128) -> Option<Vec<(char, bool)>> {
+fn christoffel(u: i128, v: i128) -> Option<(Vec<(char, bool)>, Option<usize>)> {
     let (n, m) = (u.abs(), v.abs());
-    if n + m > WIDTH as i128 {
+    // Room for the separator column and a margin on each side.
+    if n + m > (WIDTH - 3) as i128 {
         return None;
     }
 
     // Lower word of (n, m): take a y step whenever that still stays below the line.
+    // The factorization splits at the one path point closest to the line,
+    // where m*i - n*j = 1.
     let (mut i, mut j) = (0i128, 0i128);
     let mut word: Vec<char> = Vec::new();
+    let mut split = None;
     while i < n || j < m {
         if j < m && (i == n || n * (j + 1) <= m * i) {
             word.push('y');
@@ -440,37 +445,45 @@ fn christoffel(u: i128, v: i128) -> Option<Vec<(char, bool)>> {
             word.push('x');
             i += 1;
         }
+        if m * i - n * j == 1 {
+            split = Some(word.len());
+        }
     }
 
     // Below the line means smaller y, so a negative v runs the path in reverse.
     if v < 0 {
         word.reverse();
+        split = split.map(|s| word.len() - s);
     }
 
-    Some(
-        word.into_iter()
-            .map(|c| (c, if c == 'x' { u < 0 } else { v < 0 }))
-            .collect(),
-    )
+    let letters = word
+        .into_iter()
+        .map(|c| (c, if c == 'x' { u < 0 } else { v < 0 }))
+        .collect();
+    Some((letters, split))
 }
 
 /// Positive letters go on the top row and negative letters on the bottom row.
+/// The separator spans all three rows, like the rational bar turned on its side.
 fn christoffel_body(m: Mat) -> Vec<String> {
     let u = m.a as i128 + m.b as i128;
     let v = m.c as i128 + m.d as i128;
-    let Some(word) = christoffel(u, v) else {
+    let Some((word, split)) = christoffel(u, v) else {
         return too_large();
     };
-    let row = |negative: bool| -> String {
-        word.iter()
-            .map(|&(c, neg)| if neg == negative { c } else { ' ' })
-            .collect()
-    };
-    vec![
-        center_pad(&row(false), WIDTH),
-        " ".repeat(WIDTH),
-        center_pad(&row(true), WIDTH),
-    ]
+
+    let mut rows = [String::new(), String::new(), String::new()];
+    for (idx, &(c, neg)) in word.iter().enumerate() {
+        if split == Some(idx) {
+            rows[0].push('╷');
+            rows[1].push('│');
+            rows[2].push('╵');
+        }
+        rows[0].push(if neg { ' ' } else { c });
+        rows[1].push(' ');
+        rows[2].push(if neg { c } else { ' ' });
+    }
+    rows.map(|r| center_pad(&r, WIDTH)).to_vec()
 }
 
 fn render_node(m: Option<Mat>, bold: bool, view: View) -> Vec<String> {
