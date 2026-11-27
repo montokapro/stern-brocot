@@ -157,6 +157,7 @@ enum View {
     Rational,
     Decimal,
     Minkowski,
+    Christoffel,
     ExplainPath,
     ExplainMatrix,
 }
@@ -167,7 +168,8 @@ impl View {
             View::Matrix => View::Rational,
             View::Rational => View::Decimal,
             View::Decimal => View::Minkowski,
-	    View::Minkowski => View::ExplainPath,
+	    View::Minkowski => View::Christoffel,
+	    View::Christoffel => View::ExplainPath,
             View::ExplainPath => View::ExplainMatrix,
             View::ExplainMatrix => View::Matrix,
         }
@@ -179,6 +181,7 @@ impl View {
             View::Rational => "rational",
             View::Decimal => "decimal",
             View::Minkowski => "minkowski",
+            View::Christoffel => "christoffel",
             View::ExplainPath => "explain path",
             View::ExplainMatrix => "explain matrix",
         }
@@ -415,6 +418,61 @@ fn minkowski_dyadic(num: i128, den: i128) -> Option<(i128, u32)> {
     Some((p, q))
 }
 
+/// Christoffel word of the pair (u, v) = (a+b, c+d), as (letter, negative) pairs.
+/// 'x' is a horizontal step and 'y' a vertical one; a negative letter steps left or down.
+/// The word traces the lattice path from (0, 0) to (u, v) that stays weakly below the
+/// straight line between them and as close to it as possible.
+/// None if the word wouldn't fit in a box.
+fn christoffel(u: i128, v: i128) -> Option<Vec<(char, bool)>> {
+    let (n, m) = (u.abs(), v.abs());
+    if n + m > WIDTH as i128 {
+        return None;
+    }
+
+    // Lower word of (n, m): take a y step whenever that still stays below the line.
+    let (mut i, mut j) = (0i128, 0i128);
+    let mut word: Vec<char> = Vec::new();
+    while i < n || j < m {
+        if j < m && (i == n || n * (j + 1) <= m * i) {
+            word.push('y');
+            j += 1;
+        } else {
+            word.push('x');
+            i += 1;
+        }
+    }
+
+    // Below the line means smaller y, so a negative v runs the path in reverse.
+    if v < 0 {
+        word.reverse();
+    }
+
+    Some(
+        word.into_iter()
+            .map(|c| (c, if c == 'x' { u < 0 } else { v < 0 }))
+            .collect(),
+    )
+}
+
+/// Positive letters go on the top row and negative letters on the bottom row.
+fn christoffel_body(m: Mat) -> Vec<String> {
+    let u = m.a as i128 + m.b as i128;
+    let v = m.c as i128 + m.d as i128;
+    let Some(word) = christoffel(u, v) else {
+        return too_large();
+    };
+    let row = |negative: bool| -> String {
+        word.iter()
+            .map(|&(c, neg)| if neg == negative { c } else { ' ' })
+            .collect()
+    };
+    vec![
+        center_pad(&row(false), WIDTH),
+        " ".repeat(WIDTH),
+        center_pad(&row(true), WIDTH),
+    ]
+}
+
 fn render_node(m: Option<Mat>, bold: bool, view: View) -> Vec<String> {
     let blank = " ".repeat(WIDTH);
     let single = |s: &str| vec![blank.clone(), center_pad(s, WIDTH), blank.clone()];
@@ -430,7 +488,8 @@ fn render_node(m: Option<Mat>, bold: bool, view: View) -> Vec<String> {
             } else {
                 matrix_body(cells)
             }
-        }
+        },
+	(Some(m), View::Christoffel) => christoffel_body(m),
         (Some(m), view) => {
             let (n, d) = frac(m);
             if d == 0 {

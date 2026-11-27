@@ -14,7 +14,7 @@ cargo run
 
 - **← →**: Move left or right. Multiplies on the right (Stern–Brocot) and appends to the path.
 - **↑ ↓**: Move up or down. Multiplies on the left (Calkin–Wilf) and prepends to the path.
-- **V**: Cycle the view: matrix → rational → decimal → explain path → explain matrix.
+- **V**: Cycle the view: matrix → rational → decimal → minkowski → christoffel → explain path → explain matrix.
 - **S**: Toggle swap mode.
 - **I**: Toggle inverse mode.
 - **R**: Reset to the identity matrix. Keeps the view, swap and inverse settings.
@@ -198,6 +198,41 @@ The value passed through the Minkowski question mark function `?(x)`. It is defi
      1
 ┗         ┛
 ```
+
+### Christoffel
+
+The Christoffel word of the pair `(u, v) = (a + b, c + d)`, which are the numerator and denominator with their signs kept. The word has `|u|` letters `x` and `|v|` letters `y`. It traces the lattice path from the origin to `(u, v)` that stays below the straight line between them and as close to it as possible. `x` is a horizontal step and `y` is a vertical one.
+
+The letter says which step is taken, and the row says its direction. Positive letters (right or up) sit on the top row, and negative letters (left or down) sit on the bottom row.
+
+5/3, where `(u, v) = (5, 3)`:
+```
+┏         ┓
+ xxyxxyxy
+
+
+┗         ┛
+```
+
+-5/3, where `(u, v) = (-5, 3)`:
+```
+┏         ┓
+   y  y y
+
+ xx xx x
+┗         ┛
+```
+
+5/3, where `(u, v) = (-5, -3)`:
+```
+┏         ┓
+
+
+ yxyxxyxx
+┗         ┛
+```
+
+Negating `u` only moves the `x`s to the bottom row. Negating `v` reverses the word and moves the `y`s to the bottom row.
 
 ### Explain path
 
